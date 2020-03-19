@@ -7,7 +7,11 @@
           make-custom-binary-input/output-port
           make-custom-textual-input/output-port)
   (cond-expand
-   (gauche (include "181.gauche.scm"))
+   (gauche
+    (import (gauche base)
+            (gauche uvector)
+            (gauche vport))
+    (include "181.gauche.scm"))
    (else   
     ;; redefine those procedures
     (export call-with-port
