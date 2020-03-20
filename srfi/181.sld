@@ -8,7 +8,8 @@
           make-custom-textual-input/output-port)
   (cond-expand
    (gauche
-    (import (gauche base)
+    (import (scheme base)
+            (gauche base)
             (gauche uvector)
             (gauche vport))
     (include "181.gauche.scm"))
@@ -42,7 +43,7 @@
             write-u8
             write-bytevetor
             flush-output-port
-            ))
+            )
    (import (except (scheme base)
                    call-with-port
                    input-port?
@@ -93,7 +94,7 @@
                          flush-output-port) r7rs:)
            (prefix (scheme read) r7rs:)
            (prefix (scheme write) r7rs:))
-   (include "181.impl.scm")))
+   (include "181.impl.scm"))))
 
 
 ;; Local variables:
