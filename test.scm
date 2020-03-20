@@ -1,7 +1,6 @@
 ;; -*- coding:utf-8 -*-
 
 (import (scheme base)
-        (gauche base)
         (srfi 1)
         (srfi 13)
         (srfi 64)
@@ -17,7 +16,8 @@
             "binary-input"
             (lambda (buf start count)   ; read!
               (let ((size (min count (- (bytevector-length data) pos))))
-                (bytevector-copy! buf start data pos size)
+                (bytevector-copy! buf start data pos (+ pos size))
+                (set! pos (+ pos size))
                 size))
             (lambda () pos)             ; get-position
             (lambda (k) (set! pos k))   ; set-position
@@ -32,6 +32,7 @@
 
     (test-equal (bytevector-copy data 3)
                 (read-bytevector 997 p))
+    (test-equal (eof-object) (read-u8 p))
     (test-assert (begin (close-port p)
                         closed))
     ))
@@ -53,7 +54,7 @@
                     (string-copy! buf start data pos size)
                     (do ((i 0 (+ i 1))
                          (j pos (+ j 1)))
-                        ((= i size))
+                        ((= i size) (set! pos j))
                       (vector-set! buf (+ start i) (string-ref data j)))))
                 size))
             (lambda () pos)             ; get-position
@@ -69,6 +70,8 @@
 
     (test-equal (string-copy data 3)
                 (read-string 997 p))
+    (test-equal (eof-object) (read-char p))
+
     (test-assert (begin (close-port p)
                         closed))
     ))

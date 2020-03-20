@@ -38,7 +38,7 @@
       (set! cbuf (make-vector (quotient (u8vector-length buf) 4))))
     (let1 n (read! cbuf 0 (vector-length cbuf))
       (if (zero? n)
-        0
+        n
         (let* ([s (vector->string cbuf 0 n)]
                [size (string-size s)])
           (assume (<= size (u8vector-length buf)))
