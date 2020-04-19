@@ -76,6 +76,16 @@
                         closed))
     ))
 
+(let ((data (apply bytevector
+                   (list-tabulate 1000 (lambda (i) (modulo i 256)))))
+      (sink '())
+      (pos 0)
+      (closed #f))
+  (let ((p (make-custom-binary-output-port
+            "binary-output"
+            (lambda (buf start count)   ;write!
+              (do ([k 
+
 (test-end  "srfi-181-test")
 
 
