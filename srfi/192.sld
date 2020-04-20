@@ -6,7 +6,8 @@
           set-port-position!)
   (cond-expand
    (gauche
-    (import (gauche base))
+    (import (scheme base)
+            (gauche base))
     (include "192.gauche.scm"))
    (else
     (import (scheme base)

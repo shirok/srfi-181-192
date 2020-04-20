@@ -9,12 +9,13 @@
     (if (and (= offset 0) (eq? whence 'SEEK_CUR))
       (and get-position (get-position))
       (and set-position!
-           (ecase whence
-             [(SEEK_SET) (set-position! offset)]
-             [(SEEK_CUR) (and get-position
-                              (set-position! (+ offset (get-position))))]
-             [(SEEK_END) #f]            ; unsupportable
-             )))))
+           (cond
+            [(eqv? whence SEEK_SET) (set-position! offset)]
+            [(eqv? whence SEEK_CUR) 
+             (and get-position
+                  (set-position! (+ offset (get-position))))]
+            [(eqv? whence SEEK_END) #f]            ; unsupportable
+            )))))
 
 (define (make-custom-binary-input-port id read!
                                        get-position set-position!
@@ -30,25 +31,34 @@
 (define (make-custom-textual-input-port id read!
                                         get-position set-position!
                                         close)
-  ;; <buffered-input-port> uses u8vector for the buffer, so we have
-  ;; to convert it.
-  (define cbuf #f)                      ;vector, allocated on demand
-  (define (filler buf)
-    (unless cbuf
-      (set! cbuf (make-vector (quotient (u8vector-length buf) 4))))
-    (let1 n (read! cbuf 0 (vector-length cbuf))
-      (if (zero? n)
-        n
-        (let* ([s (vector->string cbuf 0 n)]
-               [size (string-size s)])
-          (assume (<= size (u8vector-length buf)))
-          (string->u8vector! buf 0 s)
-          size))))
-  (make <buffered-input-port>
-    :name id
-    :fill filler
-    :seek (make-seeker get-position set-position!)
-    :close close))
+  (if (or get-position set-position!)
+    ;; If positioning is required, we can't buffer characters.
+    (let ([buf (make-vector 1)])
+      (make <virtual-input-port>
+        :getc (^[] (let1 n (read! buf 0 1)
+                     (if (zero? n)
+                       (eof-object)
+                       (vector-ref buf 0))))
+        :seek (make-seeker get-position set-position!)
+        :close close))
+    ;; <buffered-input-port> uses u8vector for the buffer, so we have
+    ;; to convert it.
+    (let ([cbuf #f])                     ;vector, allocated on demand
+      (define (filler buf)
+        (unless cbuf
+          (set! cbuf (make-vector (quotient (u8vector-length buf) 4))))
+        (let1 n (read! cbuf 0 (vector-length cbuf))
+          (if (zero? n)
+            n
+            (let* ([s (vector->string cbuf 0 n)]
+                   [size (string-size s)])
+              (assume (<= size (u8vector-length buf)))
+              (string->u8vector! buf 0 s)
+              size))))
+      (make <buffered-input-port>
+        :name id
+        :fill filler
+        :close close))))
 
 (define (make-custom-binary-output-port id write!
                                         get-position set-position!

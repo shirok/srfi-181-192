@@ -25,7 +25,7 @@
 
 (cond-expand
  (chibi 
-  ;; adaptr srfi-64 test-equal to (chibi test)
+  ;; adapt srfi-64 macros to (chibi test)
   (define-syntax test-equal
     (syntax-rules ()
       ((_ expect expr) (chibi:test-equal equal? expect expr))))
@@ -34,11 +34,48 @@
       ((_ expect expr) (chibi:test-equal eqv? expect expr)))))
  (else))
 
-(test-begin "srfi-181-test")
+(test-begin "srfi-181-192-test")
 
+;; Binary input, no port positioning
 (let ((data (apply bytevector
                    (list-tabulate 1000 (lambda (i) (modulo i 256)))))
       (pos  0)
+      (closed #f))
+  (let ((p (make-custom-binary-input-port 
+            "binary-input"
+            (lambda (buf start count)   ; read!
+              (let ((size (min count (- (bytevector-length data) pos))))
+                (bytevector-copy! buf start data pos (+ pos size))
+                (set! pos (+ pos size))
+                size))
+            #f                          ; get-position
+            #f                          ; set-position
+            (lambda () (set! closed #t))) ; close
+           ))
+    (test-assert (port? p))
+    (test-assert (input-port? p))
+    (test-assert (not (output-port? p)))
+    (test-assert (not (port-has-port-position? p)))
+    (test-assert (not (port-has-set-port-position!? p)))
+    
+    (test-eqv 0 (read-u8 p))
+    (test-eqv 1 (read-u8 p))
+    (test-eqv 2 (peek-u8 p))
+    (test-eqv 2 (read-u8 p))
+
+    (test-equal (bytevector-copy data 3)
+                (read-bytevector 997 p))
+    (test-equal (eof-object) (read-u8 p))
+    
+    (test-assert (begin (close-port p)
+                        closed))
+    ))
+
+;; Binary input, port positioning
+(let ((data (apply bytevector
+                   (list-tabulate 1000 (lambda (i) (modulo i 256)))))
+      (pos  0)
+      (saved-pos #f)
       (closed #f))
   (let ((p (make-custom-binary-input-port 
             "binary-input"
@@ -53,18 +90,28 @@
            ))
     (test-assert (port? p))
     (test-assert (input-port? p))
+    (test-assert (not (output-port? p)))
+    (test-assert (port-has-port-position? p))
+    (test-assert (port-has-set-port-position!? p))
     
     (test-eqv 0 (read-u8 p))
     (test-eqv 1 (read-u8 p))
+    (test-eqv 2 (peek-u8 p))
+    (set! saved-pos (port-position p))
     (test-eqv 2 (read-u8 p))
 
     (test-equal (bytevector-copy data 3)
                 (read-bytevector 997 p))
     (test-equal (eof-object) (read-u8 p))
+    
+    (set-port-position! p saved-pos)
+    (test-eqv 2 (read-u8 p))
+
     (test-assert (begin (close-port p)
                         closed))
     ))
 
+;; Textual input, no port positioning
 (let ((data (string-tabulate (lambda (i) 
                                (integer->char
                                 (cond-expand
@@ -85,21 +132,75 @@
                         ((= i size) (set! pos j))
                       (vector-set! buf (+ start i) (string-ref data j)))))
                 size))
-            (lambda () pos)             ; get-position
-            (lambda (k) (set! pos k))   ; set-position
+            #f                          ; get-position
+            #f                          ; set-position
             (lambda () (set! closed #t))) ; close
            ))
     (test-assert (port? p))
     (test-assert (input-port? p))
+    (test-assert (not (output-port? p)))
+    (test-assert (not (port-has-port-position? p)))
+    (test-assert (not (port-has-set-port-position!? p)))
     
     (test-eqv (string-ref data 0) (read-char p))
     (test-eqv (string-ref data 1) (read-char p))
+    (test-eqv (string-ref data 2) (peek-char p))
     (test-eqv (string-ref data 2) (read-char p))
 
     (test-equal (string-copy data 3)
                 (read-string 997 p))
     (test-equal (eof-object) (read-char p))
 
+    (test-assert (begin (close-port p)
+                        closed))
+    ))
+
+;; Textual input, port positioning
+(let ((data (string-tabulate (lambda (i) 
+                               (integer->char
+                                (cond-expand
+                                 (full-unicode (+ #x3000 i))
+                                 (else (modulo i 256)))))
+                             1000))
+      (pos  0)
+      (saved-pos #f)
+      (closed #f))
+  (let ((p (make-custom-textual-input-port 
+            "textual-input"
+            (lambda (buf start count)   ; read!
+              (let ((size (min count (- (string-length data) pos))))
+                (unless (zero? size)
+                  (if (string? buf)
+                    (string-copy! buf start data pos size)
+                    (do ((i 0 (+ i 1))
+                         (j pos (+ j 1)))
+                        ((= i size) (set! pos j))
+                      (vector-set! buf (+ start i) (string-ref data j)))))
+                size))
+            (lambda () pos)             ; get-position
+            (lambda (k) (set! pos k))   ; set-position
+            (lambda () (set! closed #t))) ; close
+           ))
+    (test-assert (port? p))
+    (test-assert (input-port? p))
+    (test-assert (not (output-port? p)))
+    (test-assert (port-has-port-position? p))
+    (test-assert (port-has-set-port-position!? p))
+    
+    (test-eqv (string-ref data 0) (read-char p))
+    (test-eqv (string-ref data 1) (read-char p))
+    (test-eqv (string-ref data 2) (peek-char p))
+    (set! saved-pos (port-position p))
+    (test-eqv (string-ref data 2) (read-char p))
+    (test-eqv (string-ref data 3) (peek-char p))
+
+    (test-equal (string-copy data 3)
+                (read-string 997 p))
+    (test-equal (eof-object) (read-char p))
+
+    (set-port-position! p saved-pos)
+    (test-eqv (string-ref data 2) (peek-char p))
+    
     (test-assert (begin (close-port p)
                         closed))
     ))
@@ -114,8 +215,4 @@
 ;;             (lambda (buf start count)   ;write!
 ;;               (do ([k 
 
-(test-end  "srfi-181-test")
-
-
-
-
+(test-end  "srfi-181-192-test")
