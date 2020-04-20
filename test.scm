@@ -1,10 +1,25 @@
 ;; -*- coding:utf-8 -*-
 
-(import (scheme base)
-        (srfi 1)
-        (srfi 13)
-        (srfi 64)
-        (srfi 181))
+(cond-expand
+ (gauche (import (scheme base)
+                 (srfi 1)
+                 (srfi 13)
+                 (srfi 64)))
+ (chibi  (import (except (scheme base)
+                         input-port? output-port? textual-port? binary-port?
+                         port? close-port close-input-port close-output-port
+                         read-char peek-char read-line char-ready?
+                         read-string read-u8 peek-u8 u8-ready?
+                         read-bytevector read-bytevector!
+                         write-char write-string write-u8
+                         write-bytevector flush-output-port)
+                 (srfi 1)
+                 (srfi 130)
+                 (chibi test)
+                 (srfi 181 adapter))))
+
+(import (srfi 181))
+(import (srfi 192))
 
 (test-begin "srfi-181-test")
 
@@ -76,15 +91,15 @@
                         closed))
     ))
 
-(let ((data (apply bytevector
-                   (list-tabulate 1000 (lambda (i) (modulo i 256)))))
-      (sink '())
-      (pos 0)
-      (closed #f))
-  (let ((p (make-custom-binary-output-port
-            "binary-output"
-            (lambda (buf start count)   ;write!
-              (do ([k 
+;; (let ((data (apply bytevector
+;;                    (list-tabulate 1000 (lambda (i) (modulo i 256)))))
+;;       (sink '())
+;;       (pos 0)
+;;       (closed #f))
+;;   (let ((p (make-custom-binary-output-port
+;;             "binary-output"
+;;             (lambda (buf start count)   ;write!
+;;               (do ([k 
 
 (test-end  "srfi-181-test")
 

@@ -14,14 +14,12 @@
             (gauche vport))
     (include "181.gauche.scm"))
    (else   
-    (import (scheme base)
-            (scheme read)
-            (scheme write))
-    (include "181.impl.scm"))))
+    ;; Actual implementation is provided in srfi/181/generic.scm
+    (import (srfi 181 generic)))
+   ))
+
 
 ;; Local variables:
 ;; mode: scheme
 ;; end:
 
-
-  
