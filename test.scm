@@ -15,11 +15,24 @@
                          write-bytevector flush-output-port)
                  (srfi 1)
                  (srfi 130)
-                 (chibi test)
-                 (srfi 181 adapter))))
+                 (except (chibi test) test-equal)
+                 (rename (chibi test) (test-equal chibi:test-equal))
+                 (srfi 181 adapter)))
+ )
 
 (import (srfi 181))
 (import (srfi 192))
+
+(cond-expand
+ (chibi 
+  ;; adaptr srfi-64 test-equal to (chibi test)
+  (define-syntax test-equal
+    (syntax-rules ()
+      ((_ expect expr) (chibi:test-equal equal? expect expr))))
+  (define-syntax test-eqv
+    (syntax-rules ()
+      ((_ expect expr) (chibi:test-equal eqv? expect expr)))))
+ (else))
 
 (test-begin "srfi-181-test")
 

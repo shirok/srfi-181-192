@@ -134,7 +134,9 @@
            (let ((c (cp:read-char port)))
              (if (eof-object? c)
                (get-output-string out)
-               (loop (- k 1))))))))))
+               (begin
+                 (write-char c out)
+                 (loop (- k 1)))))))))))
 
 (define cp:read-bytevector
   (case-lambda
@@ -147,7 +149,9 @@
            (let ((b (cp:read-u8 port)))
              (if (eof-object? b)
                (get-output-bytevector out)
-               (loop (- k 1))))))))))
+               (begin
+                 (write-u8 b out)
+                 (loop (- k 1)))))))))))
 
 (define cp:read-bytevector!
   (case-lambda
