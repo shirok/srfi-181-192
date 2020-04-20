@@ -2,7 +2,7 @@
 (define-library (srfi 192)
   (export port-has-port-position?
           port-position
-          port-has-set-port-position?
+          port-has-set-port-position!?
           set-port-position!)
   (cond-expand
    (gauche

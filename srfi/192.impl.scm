@@ -11,9 +11,9 @@
 (define (port-position port)
   (custom-port-position port))
 
-(define (port-has-port-set-position!? port)
+(define (port-has-set-port-position!? port)
   (and (custom-port? port)
-       (custom-port-has-port-set-position!? port)))
+       (custom-port-has-set-port-position!? port)))
 
 (define (set-port-position! port pos)
   (custom-port-set-port-position! port pos))

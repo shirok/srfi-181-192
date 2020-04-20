@@ -107,3 +107,89 @@
 ;;; Derived operations
 ;;;
 
+(define cp:read-line 
+  (case-lambda
+    (() (cp:read-line (current-input-port)))
+    ((port)
+     (let ((out (open-output-string)))
+       (let loop ()
+         (let ((c (cp:read-char port)))
+           (cond ((or (eof-object? c) (eqv? c #\newline))
+                  (get-output-string out))
+                 ((eqv? c #\return)
+                  (let ((c2 (cp:peek-char port)))
+                    (when (eqv? c2 #\newline)
+                      (cp:read-char port))
+                    (get-output-string out)))
+                 (else (loop)))))))))
+
+(define cp:read-string
+  (case-lambda
+    ((k) (cp:read-string k (current-input-port)))
+    ((k port)
+     (let ((out (open-output-string)))
+       (let loop ((k k))
+         (if (zero? k)
+           (get-output-string out)
+           (let ((c (cp:read-char port)))
+             (if (eof-object? c)
+               (get-output-string out)
+               (loop (- k 1))))))))))
+
+(define cp:read-bytevector
+  (case-lambda
+    ((k) (cp:read-bytevector k (current-input-port)))
+    ((k port)
+     (let ((out (open-output-bytevector)))
+       (let loop ((k k))
+         (if (zero? k)
+           (get-output-bytevector out)
+           (let ((b (cp:read-u8 port)))
+             (if (eof-object? b)
+               (get-output-bytevector out)
+               (loop (- k 1))))))))))
+
+(define cp:read-bytevector!
+  (case-lambda
+    ((bv) (cp:read-bytevector! bv (current-input-port)))
+    ((bv p) (cp:read-bytevector! bv (current-input-port) 0))
+    ((bv p s) (cp:read-bytevector! bv (current-input-port) s
+                                   (bytevector-length bv)))
+    ((bv p s e)
+     (let loop ((k s) (cnt 0))
+       (if (>= k e)
+         cnt
+         (let ((b (cp:read-u8 p)))
+           (if (eof-object? b)
+             cnt
+             (begin
+               (bytevector-u8-set! bv k b)
+               (loop (+ k 1) (+ cnt 1))))))))))
+
+(define cp:write-string
+  (case-lambda
+    ((str) (cp:write-string str (current-output-port)))
+    ((str p) (cp:write-string str (current-output-port) 0))
+    ((str p s) (cp:write-string str (current-output-port) s
+                                (string-length str)))
+    ((str p s e)
+     (let ((src (open-input-string (substring str s e))))
+       (let loop ((c (read-char src)))
+         (unless (eof-object? c)
+           (cp:write-char c p)
+           (loop (read-char src))))))))
+
+(define cp:write-bytevector
+  (case-lambda
+    ((bv) (cp:write-bytevector bv (current-output-port)))
+    ((bv p) (cp:write-bytevector bv (current-output-port) 0))
+    ((bv p s) (cp:write-bytevector bv (current-output-port) s
+                                   (bytevector-length bv)))
+    ((bv p s e)
+     (let loop ((k s))
+       (when (< s e)
+         (cp:write-u8 (bytevector-u8-ref bv k) p)
+         (loop (+ k 1)))))))
+
+  
+
