@@ -112,11 +112,18 @@
 
 (define (custom-port-write-u8 byte port)
   (let ((buf (custom-port-buf port)))
+    (when (custom-port-prefetch port)
+      (custom-port-prefetch-set! port #f)
+      ((custom-port-set-position! port) 
+       (- ((custom-port-get-position port)) 1)))
     (bytevector-u8-set! buf 0 byte)
     ((custom-port-write! port) buf 0 1)))
 
 (define (custom-port-write-char ch port)
   (let ((buf (custom-port-buf port)))
+    (when (custom-port-prefetch port)
+      (custom-port-prefetch-set! port #f)
+      ((custom-port-set-position! port) (custom-port-prefetch-pos port)))
     (vector-set! buf 0 ch)
     ((custom-port-write! port) buf 0 1)))
 
