@@ -185,12 +185,11 @@
 (define cp:write-bytevector
   (case-lambda
     ((bv) (cp:write-bytevector bv (current-output-port)))
-    ((bv p) (cp:write-bytevector bv (current-output-port) 0))
-    ((bv p s) (cp:write-bytevector bv (current-output-port) s
-                                   (bytevector-length bv)))
+    ((bv p) (cp:write-bytevector bv p 0))
+    ((bv p s) (cp:write-bytevector bv p s (bytevector-length bv)))
     ((bv p s e)
      (let loop ((k s))
-       (when (< s e)
+       (when (< k e)
          (cp:write-u8 (bytevector-u8-ref bv k) p)
          (loop (+ k 1)))))))
 
