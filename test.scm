@@ -2,6 +2,7 @@
 
 (cond-expand
  (gauche (import (scheme base)
+                 (gauche base)
                  (srfi 1)
                  (srfi 13)
                  (srfi 64)))
@@ -235,28 +236,29 @@
  (test-assert "output port?" (output-port? p))
  (test-assert "has position?" (port-has-port-position? p))
  (test-assert "set position?" (port-has-set-port-position!? p))
-
+ 
  (write-u8 3 p)
  (write-u8 1 p)
  (write-u8 4 p)
+ (flush-output-port p)
+ (test-assert "flush" flushed)
  (set! saved-pos (port-position p))
 
  (test-equal '#(3 1 4)
              (vector-copy sink 0 pos))
  (write-bytevector '#u8(1 5 9 2 6) p)
+ (flush-output-port p)
  (test-equal '#(3 1 4 1 5 9 2 6)
              (vector-copy sink 0 pos))
 
  (set-port-position! p saved-pos)
  (for-each (lambda (b) (write-u8 b p)) '(5 3 5))
+ (flush-output-port p)
  (test-equal '#(3 1 4 5 3 5)
              (vector-copy sink 0 pos))
  (test-equal '#(3 1 4 5 3 5 2 6)
              (vector-copy sink 0 (+ pos 2)))
 
- (test-assert "flush" (begin (flush-output-port p)
-                             flushed))
- 
  (test-assert "close" (begin (close-port p)
                              closed))
  )
@@ -295,24 +297,25 @@
  (write-char #\a p)
  (write-char #\b p)
  (write-char #\c p)
+ (flush-output-port p)
+ (test-assert "flush" flushed)
  (set! saved-pos (port-position p))
 
  (test-equal '#(#\a #\b #\c)
              (vector-copy sink 0 pos))
  (write-string "Quack" p)
+ (flush-output-port p)
  (test-equal '#(#\a #\b #\c #\Q #\u #\a #\c #\k)
              (vector-copy sink 0 pos))
 
  (set-port-position! p saved-pos)
  (write-string "Cli" p)
+ (flush-output-port p)
  (test-equal '#(#\a #\b #\c #\C #\l #\i)
              (vector-copy sink 0 pos))
  (test-equal '#(#\a #\b #\c #\C #\l #\i #\c #\k)
              (vector-copy sink 0 (+ pos 2)))
 
- (test-assert (begin (flush-output-port p)
-                     flushed))
- 
  (test-assert (begin (close-port p)
                      closed))
  )
