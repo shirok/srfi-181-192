@@ -193,5 +193,31 @@
          (cp:write-u8 (bytevector-u8-ref bv k) p)
          (loop (+ k 1)))))))
 
-  
+;; wrap (scheme write) - we take an easy but inefficient path
 
+(define (%write-wrapper writer obj p)
+  (if (not (custom-port? p))
+    (writer obj p)
+    (let ((out (open-output-string)))
+      (writer obj out)
+      (cp:write-string (get-output-string out) p))))
+
+(define cp:write
+  (case-lambda
+    ((obj) (%write-wrapper write obj (current-output-port)))
+    ((obj p) (%write-wrapper write obj p))))
+
+(define cp:write-shared
+  (case-lambda
+    ((obj) (%write-wrapper write-shared obj (current-output-port)))
+    ((obj p) (%write-wrapper write-shared obj p))))
+
+(define cp:write-simple
+  (case-lambda
+    ((obj) (%write-wrapper write-simple obj (current-output-port)))
+    ((obj p) (%write-wrapper write-simple obj p))))
+
+(define cp:display
+  (case-lambda
+    ((obj) (%write-wrapper display obj (current-output-port)))
+    ((obj p) (%write-wrapper display obj p))))

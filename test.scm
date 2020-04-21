@@ -14,7 +14,6 @@
                          read-bytevector read-bytevector!
                          write-char write-string write-u8
                          write-bytevector flush-output-port)
-                 (scheme write)
                  (srfi 1)
                  (srfi 130)
                  (except (chibi test) test-equal)
