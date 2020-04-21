@@ -10,6 +10,7 @@
 (define-library (srfi 181 adapter)
   (import (scheme base)
           (scheme case-lambda)
+          (scheme write)
           (srfi 181 generic))
   (export (rename cp:input-port? input-port?)
           (rename cp:output-port? output-port?)
