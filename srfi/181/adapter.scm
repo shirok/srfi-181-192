@@ -173,9 +173,8 @@
 (define cp:write-string
   (case-lambda
     ((str) (cp:write-string str (current-output-port)))
-    ((str p) (cp:write-string str (current-output-port) 0))
-    ((str p s) (cp:write-string str (current-output-port) s
-                                (string-length str)))
+    ((str p) (cp:write-string str p 0))
+    ((str p s) (cp:write-string str p s (string-length str)))
     ((str p s e)
      (let ((src (open-input-string (substring str s e))))
        (let loop ((c (read-char src)))

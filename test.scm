@@ -205,14 +205,111 @@
                         closed))
     ))
 
-;; (let ((data (apply bytevector
-;;                    (list-tabulate 1000 (lambda (i) (modulo i 256)))))
-;;       (sink '())
-;;       (pos 0)
-;;       (closed #f))
-;;   (let ((p (make-custom-binary-output-port
-;;             "binary-output"
-;;             (lambda (buf start count)   ;write!
-;;               (do ([k 
+;; binary output, port positioning
+(let ((data (apply bytevector
+                   (list-tabulate 1000 (lambda (i) (modulo i 256)))))
+      (sink (make-vector 2000 #f))
+      (pos 0)
+      (saved-pos #f)
+      (closed #f)
+      (flushed #f))
+  (let ((p (make-custom-binary-output-port
+            "binary-output"
+            (lambda (buf start count)   ;write!
+              (do ((i start (+ i 1))
+                   (j pos (+ j 1)))
+                  ((>= i (+ start count)) (set! pos j))
+                (vector-set! sink j (bytevector-u8-ref buf i)))
+              count)
+            (lambda () pos)             ;get-position
+            (lambda (k) (set! pos k))   ;set-position!
+            (lambda () (set! closed #t)) ; close
+            (lambda () (set! flushed #t)) ; flush
+            )))
+    (test-assert (port? p))
+    (test-assert (not (input-port? p)))
+    (test-assert (output-port? p))
+    (test-assert (port-has-port-position? p))
+    (test-assert (port-has-set-port-position!? p))
+
+    (write-u8 3 p)
+    (write-u8 1 p)
+    (write-u8 4 p)
+    (set! saved-pos (port-position p))
+
+    (test-equal '#(3 1 4)
+                (vector-copy sink 0 pos))
+    (for-each (lambda (b) (write-u8 b p)) '(1 5 9 2 6))
+    (test-equal '#(3 1 4 1 5 9 2 6)
+                (vector-copy sink 0 pos))
+
+    (set-port-position! p saved-pos)
+    (for-each (lambda (b) (write-u8 b p)) '(5 3 5))
+    (test-equal '#(3 1 4 5 3 5)
+                (vector-copy sink 0 pos))
+    (test-equal '#(3 1 4 5 3 5 2 6)
+                (vector-copy sink 0 (+ pos 2)))
+
+    (test-assert (begin (flush-output-port p)
+                        flushed))
+    
+    (test-assert (begin (close-port p)
+                        closed))
+    ))
+
+;; textual output, port positioning
+(let ((data (apply bytevector
+                   (list-tabulate 1000 (lambda (i) (modulo i 256)))))
+      (sink (make-vector 2000 #f))
+      (pos 0)
+      (saved-pos #f)
+      (closed #f)
+      (flushed #f))
+  (let ((p (make-custom-textual-output-port
+            "textual-output"
+            (lambda (buf start count)   ;write!
+              (do ((i start (+ i 1))
+                   (j pos (+ j 1)))
+                  ((>= i (+ start count)) (set! pos j))
+                (vector-set! sink j
+                             (if (string? buf)
+                               (string-ref buf i)
+                               (vector-ref buf i))))
+              count)
+            (lambda () pos)             ;get-position
+            (lambda (k) (set! pos k))   ;set-position!
+            (lambda () (set! closed #t)) ; close
+            (lambda () (set! flushed #t)) ; flush
+            )))
+    (test-assert (port? p))
+    (test-assert (not (input-port? p)))
+    (test-assert (output-port? p))
+    (test-assert (port-has-port-position? p))
+    (test-assert (port-has-set-port-position!? p))
+
+    (write-char #\a p)
+    (write-char #\b p)
+    (write-char #\c p)
+    (set! saved-pos (port-position p))
+
+    (test-equal '#(#\a #\b #\c)
+                (vector-copy sink 0 pos))
+    (write-string "Quack" p)
+    (test-equal '#(#\a #\b #\c #\Q #\u #\a #\c #\k)
+                (vector-copy sink 0 pos))
+
+    (set-port-position! p saved-pos)
+    (write-string "Cli" p)
+    (test-equal '#(#\a #\b #\c #\C #\l #\i)
+                (vector-copy sink 0 pos))
+    (test-equal '#(#\a #\b #\c #\C #\l #\i #\c #\k)
+                (vector-copy sink 0 (+ pos 2)))
+
+    (test-assert (begin (flush-output-port p)
+                        flushed))
+    
+    (test-assert (begin (close-port p)
+                        closed))
+    ))
 
 (test-end  "srfi-181-192-test")

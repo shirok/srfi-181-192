@@ -54,10 +54,12 @@
   ((custom-port-set-position! port) pos))
 
 (define (custom-input-port? port)
-  (boolean (custom-port-read! port)))
+  (boolean (and (custom-port? port)
+                (custom-port-read! port))))
 
 (define (custom-output-port? port)
-  (boolean (custom-port-write! port)))
+  (boolean (and (custom-port? port)
+                (custom-port-write! port))))
 
 (define (custom-port-textual? port)
   (not (custom-port-binary? port)))
@@ -108,12 +110,12 @@
             (custom-port-prefetch-set! port (vector-ref buf 0))
             (vector-ref buf 0))))))
 
-(define (custom-port-write-u8 port byte)
+(define (custom-port-write-u8 byte port)
   (let ((buf (custom-port-buf port)))
     (bytevector-u8-set! buf 0 byte)
     ((custom-port-write! port) buf 0 1)))
 
-(define (custom-port-write-char port ch)
+(define (custom-port-write-char ch port)
   (let ((buf (custom-port-buf port)))
     (vector-set! buf 0 ch)
     ((custom-port-write! port) buf 0 1)))
@@ -161,7 +163,7 @@
                                          get-position set-position! 
                                          close . opts)
   (let ((flush (if (pair? opts) (car opts) #f)))
-    (%make-custom-port id #f #f #f (make-bytevector 1)
+    (%make-custom-port id #f #f #f (make-vector 1)
                        #f write!
                        get-position
                        set-position!
@@ -183,7 +185,7 @@
                                                get-position set-position!
                                                close . opts)
   (let ((flush (if (pair? opts) (car opts) #f)))
-    (%make-custom-port id #f #f #f (make-bytevector 1)
+    (%make-custom-port id #f #f #f (make-vector 1)
                        read! write!
                        get-position
                        set-position!

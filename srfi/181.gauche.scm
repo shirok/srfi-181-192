@@ -64,16 +64,17 @@
                                         get-position set-position!
                                         close :optional (flush #f))
   (define (flusher buf complete?)
-    (if (not complete)
+    (if (not complete?)
       (write! buf 0 (u8vector-length buf))
       ;; this is a buffer-flush operation
       (let1 len (u8vector-length buf)
         (let loop ([pos 0])
           (if (= pos len)
-            (when flush (flush))
-            len)
-          (let1 n (write! buf pos (- len pos))
-            (loop (+ pos n)))))))
+            (begin
+              (when flush (flush))
+              len)
+            (let1 n (write! buf pos (- len pos))
+              (loop (+ pos n))))))))
   (make <buffered-output-port>
     :name id
     :flush flusher
