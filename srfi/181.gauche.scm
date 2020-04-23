@@ -65,7 +65,7 @@
                                         close :optional (flush #f))
   (define (flusher buf complete?)
     (if (not complete?)
-      #?,(write! buf 0 (u8vector-length buf))
+      (write! buf 0 (u8vector-length buf))
       ;; this is a buffer-flush operation
       (let1 len (u8vector-length buf)
         (let loop ([pos 0])
@@ -90,6 +90,12 @@
   (make <virtual-output-port>
     :name id
     :putc (^c (vector-set! cbuf 0 c) (write! cbuf 0 1))
+    :puts (^s (let1 siz (string-length s)
+                (when (< (vector-length cbuf) siz)
+                  (set! cbuf (make-vector siz)))
+                (do-ec (: c (index i) s)
+                       (vector-set! cbuf i c))
+                (write! cbuf 0 siz)))
     :seek (make-seeker get-position set-position!)
     :flush (^[] (and flush (flush)))
     :close close))
