@@ -2,14 +2,12 @@
 ;;; This module overrides R7RS basic port procedures to handle
 ;;; custom ports.
 ;;;
-;;; Note: read is not included, for it will be a lots of work to
-;;; implement its full functionality.  This is mostly for the
-;;; demonstration purpose.
-;;;
 
 (define-library (srfi 181 adapter)
   (import (scheme base)
           (scheme case-lambda)
+          (scheme char)
+          (scheme read)
           (scheme write)
           (srfi 181 generic))
   (export (rename cp:input-port? input-port?)
@@ -20,7 +18,7 @@
           (rename cp:close-port close-port)
           (rename cp:close-input-port close-input-port)
           (rename cp:close-output-port close-output-port)
-          ;; (rename cp:read read)
+          (rename cp:read read)
           (rename cp:read-char read-char)
           (rename cp:peek-char peek-char)
           (rename cp:read-line read-line)

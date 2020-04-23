@@ -2,6 +2,8 @@
 
 (cond-expand
  (gauche (import (scheme base)
+                 (scheme write)
+                 (scheme read)
                  (gauche base)
                  (srfi 1)
                  (srfi 13)
@@ -131,7 +133,7 @@
               (let ((size (min count (- (string-length data) pos))))
                 (unless (zero? size)
                   (if (string? buf)
-                    (string-copy! buf start data pos size)
+                    (string-copy! buf start data pos (+ pos size))
                     (do ((i 0 (+ i 1))
                          (j pos (+ j 1)))
                         ((= i size) (set! pos j))
@@ -177,7 +179,7 @@
               (let ((size (min count (- (string-length data) pos))))
                 (unless (zero? size)
                   (if (string? buf)
-                    (string-copy! buf start data pos size)
+                    (string-copy! buf start data pos (+ pos size))
                     (do ((i 0 (+ i 1))
                          (j pos (+ j 1)))
                         ((= i size) (set! pos j))
@@ -446,5 +448,62 @@
  )
 
 )) ; cond expand
+
+(test-group 
+ "high-level i/o"
+ (define source 
+   (let ((orig "((a b c . d)
+                  (a . (b . (c . (d . ()))))
+                  #(a b c d)
+                  (#\\a #\\b #\\c #\\d #\\x07 #\\) #\\#)
+                  \"abcd\"
+                  #t #f #true #false
+                  |a\\x07;bcd|
+                  ;;comment
+                  #u8(1 2 3 4 5)
+                  #0=(a) #0#
+                  1 1.111 3e5 #xff #b-0101 -5/3+3.9i +inf.0 +nan.0
+                  )"))
+     (string-append orig "\n" orig "\n;end of input")))
+ (define data (read (open-input-string source)))
+ (define source-pos 0)
+ (define sink (open-output-string))
+ (define inp (make-custom-textual-input-port
+              "textual-input"
+              (lambda (buf start count) ;read!
+                (let ((size (min count (- (string-length source) source-pos))))
+                  (unless (zero? size)
+                    (if (string? buf)
+                      (string-copy! buf start source
+                                    source-pos (+ source-pos count))
+                      (do ((i 0 (+ i 1))
+                           (j source-pos (+ j 1)))
+                          ((= i size) (set! source-pos j))
+                        (vector-set! buf (+ start i) (string-ref source j)))))
+                  size))
+              #f #f #f))
+ (define outp (make-custom-textual-output-port
+               "textual-output"
+               (lambda (buf start count)   ;write!
+                 (do ((i start (+ i 1)))
+                     ((>= i (+ start count)))
+                   (write-char (if (string? buf)
+                                 (string-ref buf i)
+                                 (vector-ref buf i))
+                               sink))
+                 count)
+               #f #f #f))
+
+ (let ((expr1 (read inp)))
+   (test-equal "read first expr" data expr1)
+   (write expr1 outp))
+ (let ((expr2 (read inp)))
+   (test-equal "read second expr" data expr2)
+   (write expr2 outp))
+ (test-assert "finishing" (eof-object? (read inp)))
+ (let ((p (open-input-string (get-output-string sink))))
+   (test-equal "written expr 1" data (read p))
+   (test-equal "written expr 2" data (read p)))
+ )
 
 (test-end  "srfi-181-192-test")

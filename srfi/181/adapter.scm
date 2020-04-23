@@ -221,3 +221,80 @@
   (case-lambda
     ((obj) (%write-wrapper display obj (current-output-port)))
     ((obj p) (%write-wrapper display obj p))))
+
+;; wrap (scheme read)
+;; we read characters until we get complete sexpt, then use the native
+;; read to parse.  It's easier than reproduce the read functionality.
+;; (but we miss implementation-specific extensions).
+(define cp:read
+  (case-lambda
+    (() (cp:read (current-input-port)))
+    ((p) (if (not (custom-port? p))
+           (read p)
+           (read (open-input-string (%fetch-sexpr p)))))))
+
+;; Fetch a complete sexpr into a string.  If input has invalid or premature
+;; sexpr, we just return it as is, and let the native read handle the error.
+;; This code is lifted from Gauche's complete-sexp?.
+(define (%fetch-sexpr p)
+  (define buf (open-output-string))
+
+  ;; main loop
+  (define (rec closer)
+    (let ((ch (deposit (cp:read-char p))))
+      (cond ((eof-object? ch))
+            ((eqv? closer ch))
+            ((eqv? #\( ch) (rec #\) ) (when closer (rec closer)))
+            ((eqv? #\[ ch) (rec #\] ) (when closer (rec closer)))
+            ((eqv? #\{ ch) (rec #\} ) (when closer (rec closer)))
+            ((eqv? #\" ch) (rec-escaped #\") (when closer (rec closer)))
+            ((eqv? #\| ch) (rec-escaped #\|) (when closer (rec closer)))
+            ((eqv? #\; ch) (skip-to-nl) (rec closer))
+            ((eqv? #\# ch)
+             (let ((c2 (deposit (cp:read-char p))))
+               (cond ((eof-object? c2))
+                     ((eqv? c2 #\\) 
+                      (let ((c3 (deposit (cp:read-char p))))
+                        (unless (eof-object? c3)
+                          (skip-token) 
+                          (when closer (rec closer)))))
+                     ((eqv? c2 #\,) (rec closer)) ; srfi-10
+                     ((eqv? c2 #\() (rec #\)) (when closer (rec closer))) ;vector
+                     (else (rec closer)))))
+            (else (rec closer)))))
+
+  (define (rec-escaped closer)
+    (let ((ch (deposit (cp:read-char p))))
+      (cond ((eof-object? ch))
+            ((eqv? closer ch))
+            ((eqv? #\\ ch) (deposit (cp:read-char p)) (rec-escaped closer))
+            (else (rec-escaped closer)))))
+
+  (define (skip-token)
+    (let loop ((ch (cp:peek-char p)))
+      (unless (or (eof-object? ch)
+                  (token-delimiter? ch))
+        (deposit (cp:read-char p))
+        (loop (cp:peek-char p)))))
+
+  (define (token-delimiter? ch)
+    (or (char-whitespace? ch)
+        (memv ch '(#\" #\' #\( #\) #\, #\; #\[ #\\ #\] #\` #\{ #\| #\} #\x7f))))
+
+  (define (deposit ch) (when (char? ch) (write-char ch buf)) ch)
+  
+  (define (skip-ws)
+    (let loop ((ch (cp:peek-char p)))
+      (unless (or (eof-object? ch)
+                  (not (char-whitespace? ch)))
+        (deposit (cp:read-char p))
+        (loop (cp:peek-char p)))))
+
+  (define (skip-to-nl)
+    (let loop ((ch (deposit (cp:read-char p))))
+      (unless (or (eof-object? ch)
+                  (eqv? ch #\newline))
+        (loop (deposit (cp:read-char p))))))
+
+  (rec #f)
+  (get-output-string buf))

@@ -11,7 +11,8 @@
     (import (scheme base)
             (gauche base)
             (gauche uvector)
-            (gauche vport))
+            (gauche vport)
+            (srfi 42))
     (include "181.gauche.scm"))
    (else   
     ;; Actual implementation is provided in srfi/181/generic.scm
