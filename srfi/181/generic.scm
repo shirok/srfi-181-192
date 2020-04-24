@@ -1,3 +1,9 @@
+;;;
+;;; Generic implementation of custom ports.
+;;;
+;;; MIT License.  See COPYING
+;;;
+
 (define-record-type custom-port
   ;; constructor (internal)
   (%make-custom-port id binary? prefetch prefetch-pos buf

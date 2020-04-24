@@ -1,4 +1,3 @@
-
 (define-library (srfi 181)
   (export make-custom-binary-input-port
           make-custom-textual-input-port

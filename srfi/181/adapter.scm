@@ -1,6 +1,8 @@
 ;;;
 ;;; Primitive operations
 ;;;
+;;; MIT License.  See COPYING
+;;;
 
 (define (cp:input-port? obj)
   (or (custom-input-port? obj)

@@ -1,6 +1,8 @@
 ;;
 ;; Included from 181.sld
 ;;
+;; MIT License.  See COPYING
+;;
 
 (define-constant *buffer-size* 1024)
 
